@@ -18,7 +18,7 @@ CORS(app, resources={
     r"/*": {
         "origins": [
             "http://localhost:3000",
-            "https://stream-assignment-mtxz1vrt9-sankars-projects-3d0835cc.vercel.app/",
+            "https://stream-assignment-mtxz1vrt9-sankars-projects-3d0835cc.vercel.app",
             "stream-assignment-seven.vercel.app",
             "stream-assignment-git-main-sankars-projects-3d0835cc.vercel.app",
             "https://stream-assignment-git-*.vercel.app"
