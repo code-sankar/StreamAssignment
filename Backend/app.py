@@ -125,7 +125,7 @@ def home():
     })
 
 # Your existing routes with proper CORS handling
-@app.route('/api/overlays', methods=['GET', 'OPTIONS'])
+@app.route('/overlays', methods=['GET', 'OPTIONS'])
 def get_overlays():
     if request.method == 'OPTIONS':
         return json_response({'status': 'preflight'})
@@ -142,7 +142,7 @@ def get_overlays():
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-@app.route('/api/overlays', methods=['POST', 'OPTIONS'])
+@app.route('/overlays', methods=['POST', 'OPTIONS'])
 def create_overlay():
     if request.method == 'OPTIONS':
         return json_response({'status': 'preflight'})
@@ -170,7 +170,7 @@ def create_overlay():
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-@app.route('/api/overlays/<overlay_id>', methods=['GET', 'OPTIONS'])
+@app.route('/overlays/<overlay_id>', methods=['GET', 'OPTIONS'])
 def get_overlay(overlay_id):
     if request.method == 'OPTIONS':
         return json_response({'status': 'preflight'})
@@ -188,7 +188,7 @@ def get_overlay(overlay_id):
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-@app.route('/api/overlays/<overlay_id>', methods=['PUT', 'OPTIONS'])
+@app.route('/overlays/<overlay_id>', methods=['PUT', 'OPTIONS'])
 def update_overlay(overlay_id):
     if request.method == 'OPTIONS':
         return json_response({'status': 'preflight'})
@@ -210,7 +210,7 @@ def update_overlay(overlay_id):
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-@app.route('/api/overlays/<overlay_id>', methods=['DELETE', 'OPTIONS'])
+@app.route('/overlays/<overlay_id>', methods=['DELETE', 'OPTIONS'])
 def delete_overlay(overlay_id):
     if request.method == 'OPTIONS':
         return json_response({'status': 'preflight'})
@@ -227,7 +227,7 @@ def delete_overlay(overlay_id):
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-@app.route('/api/health', methods=['GET', 'OPTIONS'])
+@app.route('/health', methods=['GET', 'OPTIONS'])
 def health_check():
     if request.method == 'OPTIONS':
         return json_response({'status': 'preflight'})
@@ -253,7 +253,7 @@ def health_check():
             'database': 'disconnected'
         }, 500)
 
-@app.route('/api/debug', methods=['GET', 'OPTIONS'])
+@app.route('/debug', methods=['GET', 'OPTIONS'])
 def debug_info():
     """Debug endpoint to check environment and connection"""
     if request.method == 'OPTIONS':

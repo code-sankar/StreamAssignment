@@ -3,7 +3,7 @@ import axios from 'axios';
 import VideoPlayer from './components/VideoPlayer';
 import OverlayManager from './components/OverlayManager';
 
-const API_BASE = 'https://streamassignment.onrender.com/api';
+const API_BASE = 'https://streamassignment.onrender.com';
 
 function App() {
   const [overlays, setOverlays] = useState([]);
