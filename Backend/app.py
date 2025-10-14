@@ -10,19 +10,18 @@ import json
 
 app = Flask(__name__)
 
-# Configuration
+
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'DPEe0TxhxCtrJ2ET0othTM7waFDuOP5y5S4ByHh6Poxm578YES21FC')
 app.config['DEBUG'] = False
 
 # CORS setup
 CORS(app, origins=[
     "http://localhost:3000",
-    "https://your-frontend-app.onrender.com",
-    "http://localhost:5000",
-    "*"  # For testing, remove in production
+    "https://stream-assignment-seven.vercel.app",
+    "http://localhost:5173",
+    
 ])
 
-# Initialize MongoDB with proper error handling
 mongo = None
 overlay_manager = None
 
@@ -44,15 +43,15 @@ try:
     
     # Test the connection
     mongo.db.command('ping')
-    print("✅ Successfully connected to MongoDB Atlas!")
+    print("Successfully connected to MongoDB Atlas!")
     
     # Import and initialize OverlayManager after successful connection
     from models import OverlayManager
     overlay_manager = OverlayManager(mongo)
-    print("✅ OverlayManager initialized successfully!")
+    print("OverlayManager initialized successfully!")
     
 except Exception as e:
-    print(f"❌ MongoDB initialization failed: {str(e)}")
+    print(f"MongoDB initialization failed: {str(e)}")
     print(f"Error type: {type(e).__name__}")
     mongo = None
     overlay_manager = None
