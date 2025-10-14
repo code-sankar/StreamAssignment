@@ -84,15 +84,15 @@ try:
     
     # Test the connection
     mongo.db.command('ping')
-    print("✅ Successfully connected to MongoDB Atlas!")
+    print("Successfully connected to MongoDB Atlas!")
     
     # Import and initialize OverlayManager after successful connection
     from models import OverlayManager
     overlay_manager = OverlayManager(mongo)
-    print("✅ OverlayManager initialized successfully!")
+    print("OverlayManager initialized successfully!")
     
 except Exception as e:
-    print(f"❌ MongoDB initialization failed: {str(e)}")
+    print(f"MongoDB initialization failed: {str(e)}")
     print(f"Error type: {type(e).__name__}")
     mongo = None
     overlay_manager = None
