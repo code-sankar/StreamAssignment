@@ -4,16 +4,21 @@ from flask_pymongo import PyMongo
 from bson import ObjectId
 from bson.json_util import dumps
 import json
+import os
 from config import Config
 from models import OverlayManager
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# CORS setup
-CORS(app, origins=["http://localhost:3000"])
+# CORS setup - more flexible for production
+CORS(app, origins=[
+    "http://localhost:3000",
+    "https://your-frontend-domain.vercel.app",  # Update with your frontend domain
+    "https://*.onrender.com"
+])
 
-# MongoDB setup with error handling
+# MongoDB setup with enhanced error handling
 try:
     mongo = PyMongo(app)
     # Test connection
@@ -21,7 +26,7 @@ try:
     print("Successfully connected to MongoDB Atlas!")
 except Exception as e:
     print(f"MongoDB connection error: {e}")
-    print("Please check your MongoDB Atlas connection string in .env file")
+    print("Please check your MongoDB Atlas connection string")
     mongo = None
 
 if mongo:
@@ -46,9 +51,13 @@ def home():
     db_error = check_db_connection()
     if db_error:
         return db_error
-    return json_response({'message': 'Livestream API is running!', 'database': 'connected'})
+    return json_response({
+        'message': 'Livestream API is running!', 
+        'database': 'connected',
+        'environment': os.getenv('RENDER', 'development')
+    })
 
-# Routes for Overlays CRUD
+# Routes for Overlays CRUD (keep your existing routes the same)
 @app.route('/api/overlays', methods=['GET'])
 def get_overlays():
     db_error = check_db_connection()
@@ -57,7 +66,6 @@ def get_overlays():
         
     try:
         overlays = overlay_manager.get_all_overlays()
-        # Convert ObjectId to string for JSON serialization
         for overlay in overlays:
             overlay['_id'] = str(overlay['_id'])
         return json_response(overlays)
@@ -140,21 +148,27 @@ def delete_overlay(overlay_id):
 # Health check endpoint with DB status
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    db_status = 'connected' if mongo and mongo.db.command('ping') else 'disconnected'
-    return json_response({
-        'status': 'healthy', 
-        'message': 'Server is running',
-        'database': db_status
-    })
+    try:
+        db_status = 'connected' if mongo and mongo.db.command('ping') else 'disconnected'
+        return json_response({
+            'status': 'healthy', 
+            'message': 'Server is running',
+            'database': db_status,
+            'environment': os.getenv('RENDER', 'development')
+        })
+    except Exception as e:
+        return json_response({
+            'status': 'error',
+            'message': str(e),
+            'database': 'disconnected'
+        }, 500)
 
 # Database connection test endpoint
 @app.route('/api/test-db', methods=['GET'])
 def test_db():
     try:
         if mongo:
-            # Try to ping the database
             mongo.db.command('ping')
-            # Try to access the overlays collection
             overlays_count = mongo.db.overlays.count_documents({})
             return json_response({
                 'status': 'success',
@@ -168,4 +182,5 @@ def test_db():
         return json_response({'status': 'error', 'message': str(e)}, 500)
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
