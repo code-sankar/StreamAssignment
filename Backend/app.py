@@ -40,7 +40,7 @@ def after_request(response):
     # List of allowed origins
     allowed_origins = [
         "http://localhost:3000",
-        "https://stream-assignment-mtxz1vrt9-sankars-projects-3d0835cc.vercel.app/",
+        "https://stream-assignment-mtxz1vrt9-sankars-projects-3d0835cc.vercel.app",
         "https://stream-assignment-*.vercel.app",
         "https://*.vercel.app"
     ]
