@@ -10,11 +10,9 @@ import json
 app = Flask(__name__)
 
 # Configuration
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-123')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'DPEe0TxhxCtrJ2ET0othTM7waFDuOP5y5S4ByHh6Poxm578YES21FC')
 app.config['DEBUG'] = False
 
-# Simple and effective CORS configuration
-# Option 1: Allow specific origins
 allowed_origins = [
     "https://stream-assignment-mtxz1vrt9-sankars-projects-3d0835cc.vercel.app",
     "http://localhost:3000",
@@ -28,16 +26,13 @@ allowed_origins = [
 # Option 2: For development, allow all origins (remove in production)
 CORS(app, origins=allowed_origins)
 
-# Or use this simpler approach that handles everything:
-# CORS(app)  # This allows all origins - good for development
 
-# Initialize MongoDB with proper error handling
 mongo = None
 overlay_manager = None
 
 try:
     # Get MongoDB URI from environment
-    mongo_uri = os.getenv('MONGO_URI')
+    mongo_uri = os.getenv('MONGO_URI', 'mongodb+srv://sankarjyotichetia57_db_user:U1IFPLMwvQcZfKE0@cluster0.cpddo24.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
     
     if not mongo_uri:
         raise ValueError("MONGO_URI environment variable is not set")
@@ -45,23 +40,22 @@ try:
     print(f"Attempting to connect to MongoDB...")
     print(f"MongoDB URI: {mongo_uri.split('@')[0]}...")
     
-    # Configure MongoDB connection
+    
     app.config['MONGO_URI'] = mongo_uri
     app.config['MONGO_CONNECT'] = False
     
     mongo = PyMongo(app)
     
-    # Test the connection
+   
     mongo.db.command('ping')
-    print("✅ Successfully connected to MongoDB Atlas!")
+    print(" Successfully connected to MongoDB Atlas!")
     
-    # Import and initialize OverlayManager after successful connection
     from models import OverlayManager
     overlay_manager = OverlayManager(mongo)
-    print("✅ OverlayManager initialized successfully!")
+    print(" OverlayManager initialized successfully!")
     
 except Exception as e:
-    print(f"❌ MongoDB initialization failed: {str(e)}")
+    print(f" MongoDB initialization failed: {str(e)}")
     print(f"Error type: {type(e).__name__}")
     mongo = None
     overlay_manager = None

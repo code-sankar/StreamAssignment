@@ -14,7 +14,7 @@ function App() {
   // Load overlays from backend
   const loadOverlays = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/overlays`);
+      const response = await axios.get(`${API_BASE}overlays`);
       setOverlays(response.data);
     } catch (error) {
       console.error('Error loading overlays:', error);
