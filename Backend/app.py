@@ -5,29 +5,70 @@ from flask_cors import CORS
 from flask_pymongo import PyMongo
 from bson import ObjectId
 from bson.json_util import dumps
-from urllib.parse import quote_plus
 import json
 
 app = Flask(__name__)
 
-
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'DPEe0TxhxCtrJ2ET0othTM7waFDuOP5y5S4ByHh6Poxm578YES21FC')
+# Configuration
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-123')
 app.config['DEBUG'] = False
 
-# CORS setup
-CORS(app, origins=[
-    "http://localhost:3000",
-    "https://stream-assignment-seven.vercel.app",
-    "http://localhost:5173",
-    
-])
+# Enhanced CORS configuration
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "http://localhost:3000",
+            "https://stream-assignment-mtxz1vrt9-sankars-projects-3d0835cc.vercel.app/",
+            "stream-assignment-seven.vercel.app",
+            "stream-assignment-git-main-sankars-projects-3d0835cc.vercel.app",
+            "https://stream-assignment-git-*.vercel.app"
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept"],
+        "supports_credentials": True,
+        "max_age": 3600
+    }
+})
 
+# Add CORS headers manually for additional security
+@app.after_request
+def after_request(response):
+    # Get the origin from the request
+    origin = request.headers.get('Origin', '')
+    
+    # List of allowed origins
+    allowed_origins = [
+        "http://localhost:3000",
+        "https://stream-assignment-mtxz1vrt9-sankars-projects-3d0835cc.vercel.app/",
+        "https://stream-assignment-*.vercel.app",
+        "https://*.vercel.app"
+    ]
+    
+    # Check if the origin is in our allowed list or matches a pattern
+    if any(origin == allowed or ( '*' in allowed and origin.endswith(allowed.split('*')[1])) for allowed in allowed_origins):
+        response.headers.add('Access-Control-Allow-Origin', origin)
+    
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Max-Age', '3600')
+    
+    return response
+
+# Handle OPTIONS requests for CORS preflight
+@app.before_request
+def handle_options():
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'preflight'})
+        return response
+
+# Initialize MongoDB with proper error handling
 mongo = None
 overlay_manager = None
 
 try:
     # Get MongoDB URI from environment
-    mongo_uri = os.getenv('MONGO_URI', 'mongodb+srv://sankarjyotichetia57_db_user:U1IFPLMwvQcZfKE0@cluster0.cpddo24.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+    mongo_uri = os.getenv('MONGO_URI')
     
     if not mongo_uri:
         raise ValueError("MONGO_URI environment variable is not set")
@@ -43,15 +84,15 @@ try:
     
     # Test the connection
     mongo.db.command('ping')
-    print("Successfully connected to MongoDB Atlas!")
+    print("✅ Successfully connected to MongoDB Atlas!")
     
     # Import and initialize OverlayManager after successful connection
     from models import OverlayManager
     overlay_manager = OverlayManager(mongo)
-    print("OverlayManager initialized successfully!")
+    print("✅ OverlayManager initialized successfully!")
     
 except Exception as e:
-    print(f"MongoDB initialization failed: {str(e)}")
+    print(f"❌ MongoDB initialization failed: {str(e)}")
     print(f"Error type: {type(e).__name__}")
     mongo = None
     overlay_manager = None
@@ -78,11 +119,16 @@ def home():
     return json_response({
         'message': 'Livestream API is running!', 
         'database': 'connected' if mongo else 'disconnected',
-        'environment': 'production' if os.getenv('RENDER') else 'development'
+        'environment': 'production' if os.getenv('RENDER') else 'development',
+        'cors': 'enabled'
     })
 
-@app.route('/api/overlays', methods=['GET'])
+# Your existing routes with proper CORS handling
+@app.route('/api/overlays', methods=['GET', 'OPTIONS'])
 def get_overlays():
+    if request.method == 'OPTIONS':
+        return json_response({'status': 'preflight'})
+    
     db_error = check_db_connection()
     if db_error:
         return db_error
@@ -95,8 +141,11 @@ def get_overlays():
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-@app.route('/api/overlays', methods=['POST'])
+@app.route('/api/overlays', methods=['POST', 'OPTIONS'])
 def create_overlay():
+    if request.method == 'OPTIONS':
+        return json_response({'status': 'preflight'})
+    
     db_error = check_db_connection()
     if db_error:
         return db_error
@@ -120,8 +169,11 @@ def create_overlay():
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-@app.route('/api/overlays/<overlay_id>', methods=['GET'])
+@app.route('/api/overlays/<overlay_id>', methods=['GET', 'OPTIONS'])
 def get_overlay(overlay_id):
+    if request.method == 'OPTIONS':
+        return json_response({'status': 'preflight'})
+    
     db_error = check_db_connection()
     if db_error:
         return db_error
@@ -135,8 +187,11 @@ def get_overlay(overlay_id):
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-@app.route('/api/overlays/<overlay_id>', methods=['PUT'])
+@app.route('/api/overlays/<overlay_id>', methods=['PUT', 'OPTIONS'])
 def update_overlay(overlay_id):
+    if request.method == 'OPTIONS':
+        return json_response({'status': 'preflight'})
+    
     db_error = check_db_connection()
     if db_error:
         return db_error
@@ -154,8 +209,11 @@ def update_overlay(overlay_id):
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-@app.route('/api/overlays/<overlay_id>', methods=['DELETE'])
+@app.route('/api/overlays/<overlay_id>', methods=['DELETE', 'OPTIONS'])
 def delete_overlay(overlay_id):
+    if request.method == 'OPTIONS':
+        return json_response({'status': 'preflight'})
+    
     db_error = check_db_connection()
     if db_error:
         return db_error
@@ -168,8 +226,11 @@ def delete_overlay(overlay_id):
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-@app.route('/api/health', methods=['GET'])
+@app.route('/api/health', methods=['GET', 'OPTIONS'])
 def health_check():
+    if request.method == 'OPTIONS':
+        return json_response({'status': 'preflight'})
+    
     try:
         if mongo:
             mongo.db.command('ping')
@@ -181,7 +242,8 @@ def health_check():
             'status': 'healthy', 
             'message': 'Server is running',
             'database': db_status,
-            'environment': 'production' if os.getenv('RENDER') else 'development'
+            'environment': 'production' if os.getenv('RENDER') else 'development',
+            'cors': 'enabled'
         })
     except Exception as e:
         return json_response({
@@ -190,17 +252,22 @@ def health_check():
             'database': 'disconnected'
         }, 500)
 
-@app.route('/api/debug', methods=['GET'])
+@app.route('/api/debug', methods=['GET', 'OPTIONS'])
 def debug_info():
     """Debug endpoint to check environment and connection"""
+    if request.method == 'OPTIONS':
+        return json_response({'status': 'preflight'})
+    
     mongo_uri = os.getenv('MONGO_URI')
+    origin = request.headers.get('Origin', 'Not provided')
     
     return json_response({
         'render': bool(os.getenv('RENDER')),
         'mongo_uri_set': bool(mongo_uri),
         'mongo_uri_preview': mongo_uri.split('@')[0] + '...' if mongo_uri else 'not set',
         'python_version': sys.version,
-        'environment_variables': list(os.environ.keys())
+        'request_origin': origin,
+        'cors_enabled': True
     })
 
 if __name__ == '__main__':
