@@ -5,48 +5,56 @@ from flask_cors import CORS
 from flask_pymongo import PyMongo
 from bson import ObjectId
 from bson.json_util import dumps
+from urllib.parse import quote_plus
 import json
 
-# Add the current directory to Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-try:
-    from config import Config
-except ImportError:
-    # Fallback configuration if import fails
-    class Config:
-        MONGO_URI = os.getenv('MONGO_URI','mongodb+srv://sankarjyotichetia57_db_user:U1IFPLMwvQcZfKE0@cluster0.cpddo24.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
-        SECRET_KEY = os.getenv('SECRET_KEY', 'DPEe0TxhxCtrJ2ET0othTM7waFDuOP5y5S4ByHh6Poxm578YES21FC')
-        DEBUG = False
-
 app = Flask(__name__)
-app.config.from_object(Config)
+
+# Configuration
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'DPEe0TxhxCtrJ2ET0othTM7waFDuOP5y5S4ByHh6Poxm578YES21FC')
+app.config['DEBUG'] = False
 
 # CORS setup
 CORS(app, origins=[
     "http://localhost:3000",
     "https://your-frontend-app.onrender.com",
-    "http://localhost:5000"
+    "http://localhost:5000",
+    "*"  # For testing, remove in production
 ])
 
-# MongoDB setup with enhanced error handling
+# Initialize MongoDB with proper error handling
+mongo = None
+overlay_manager = None
+
 try:
+    # Get MongoDB URI from environment
+    mongo_uri = os.getenv('MONGO_URI', 'mongodb+srv://sankarjyotichetia57_db_user:U1IFPLMwvQcZfKE0@cluster0.cpddo24.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+    
+    if not mongo_uri:
+        raise ValueError("MONGO_URI environment variable is not set")
+    
+    print(f"Attempting to connect to MongoDB...")
+    print(f"MongoDB URI: {mongo_uri.split('@')[0]}...")  # Log without password
+    
+    # Configure MongoDB connection
+    app.config['MONGO_URI'] = mongo_uri
+    app.config['MONGO_CONNECT'] = False  # Lazy connection
+    
     mongo = PyMongo(app)
+    
+    # Test the connection
     mongo.db.command('ping')
     print("✅ Successfully connected to MongoDB Atlas!")
-except Exception as e:
-    print(f"❌ MongoDB connection error: {e}")
-    mongo = None
-
-# Import models after mongo is initialized
-try:
+    
+    # Import and initialize OverlayManager after successful connection
     from models import OverlayManager
-    if mongo:
-        overlay_manager = OverlayManager(mongo)
-    else:
-        overlay_manager = None
-except ImportError as e:
-    print(f"❌ Models import error: {e}")
+    overlay_manager = OverlayManager(mongo)
+    print("✅ OverlayManager initialized successfully!")
+    
+except Exception as e:
+    print(f"❌ MongoDB initialization failed: {str(e)}")
+    print(f"Error type: {type(e).__name__}")
+    mongo = None
     overlay_manager = None
 
 def json_response(data, status=200):
@@ -59,20 +67,21 @@ def json_response(data, status=200):
 def check_db_connection():
     if not mongo:
         return json_response({'error': 'Database connection failed'}, 500)
-    return None
+    
+    try:
+        mongo.db.command('ping')
+        return None
+    except Exception as e:
+        return json_response({'error': f'Database ping failed: {str(e)}'}, 500)
 
 @app.route('/')
 def home():
-    db_error = check_db_connection()
-    if db_error:
-        return db_error
     return json_response({
         'message': 'Livestream API is running!', 
-        'database': 'connected',
+        'database': 'connected' if mongo else 'disconnected',
         'environment': 'production' if os.getenv('RENDER') else 'development'
     })
 
-# Your existing routes here (GET, POST, PUT, DELETE for /api/overlays)
 @app.route('/api/overlays', methods=['GET'])
 def get_overlays():
     db_error = check_db_connection()
@@ -163,7 +172,12 @@ def delete_overlay(overlay_id):
 @app.route('/api/health', methods=['GET'])
 def health_check():
     try:
-        db_status = 'connected' if mongo and mongo.db.command('ping') else 'disconnected'
+        if mongo:
+            mongo.db.command('ping')
+            db_status = 'connected'
+        else:
+            db_status = 'disconnected'
+            
         return json_response({
             'status': 'healthy', 
             'message': 'Server is running',
@@ -176,6 +190,19 @@ def health_check():
             'message': str(e),
             'database': 'disconnected'
         }, 500)
+
+@app.route('/api/debug', methods=['GET'])
+def debug_info():
+    """Debug endpoint to check environment and connection"""
+    mongo_uri = os.getenv('MONGO_URI')
+    
+    return json_response({
+        'render': bool(os.getenv('RENDER')),
+        'mongo_uri_set': bool(mongo_uri),
+        'mongo_uri_preview': mongo_uri.split('@')[0] + '...' if mongo_uri else 'not set',
+        'python_version': sys.version,
+        'environment_variables': list(os.environ.keys())
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
