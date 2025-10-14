@@ -19,7 +19,7 @@ CORS(app, origins=[
     "http://localhost:3000",
     "https://stream-assignment-seven.vercel.app",
     "http://localhost:5173",
-    
+    "*",
 ])
 
 mongo = None
