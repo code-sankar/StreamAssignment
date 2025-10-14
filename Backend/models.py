@@ -46,7 +46,6 @@ class OverlayManager:
     
     def update_overlay(self, overlay_id, data):
         try:
-            # Ensure position and size are properly formatted
             update_data = {
                 'name': data['name'],
                 'type': data['type'],

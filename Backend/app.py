@@ -1,37 +1,52 @@
+import os
+import sys
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_pymongo import PyMongo
 from bson import ObjectId
 from bson.json_util import dumps
 import json
-import os
-from config import Config
-from models import OverlayManager
+
+# Add the current directory to Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from config import Config
+except ImportError:
+    # Fallback configuration if import fails
+    class Config:
+        MONGO_URI = os.getenv('MONGO_URI','mongodb+srv://sankarjyotichetia57_db_user:U1IFPLMwvQcZfKE0@cluster0.cpddo24.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+        SECRET_KEY = os.getenv('SECRET_KEY', 'DPEe0TxhxCtrJ2ET0othTM7waFDuOP5y5S4ByHh6Poxm578YES21FC')
+        DEBUG = False
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# CORS setup - more flexible for production
+# CORS setup
 CORS(app, origins=[
     "http://localhost:3000",
-    "https://your-frontend-domain.vercel.app",  # Update with your frontend domain
-    "https://*.onrender.com"
+    "https://your-frontend-app.onrender.com",
+    "http://localhost:5000"
 ])
 
 # MongoDB setup with enhanced error handling
 try:
     mongo = PyMongo(app)
-    # Test connection
     mongo.db.command('ping')
-    print("Successfully connected to MongoDB Atlas!")
+    print("✅ Successfully connected to MongoDB Atlas!")
 except Exception as e:
-    print(f"MongoDB connection error: {e}")
-    print("Please check your MongoDB Atlas connection string")
+    print(f"❌ MongoDB connection error: {e}")
     mongo = None
 
-if mongo:
-    overlay_manager = OverlayManager(mongo)
-else:
+# Import models after mongo is initialized
+try:
+    from models import OverlayManager
+    if mongo:
+        overlay_manager = OverlayManager(mongo)
+    else:
+        overlay_manager = None
+except ImportError as e:
+    print(f"❌ Models import error: {e}")
     overlay_manager = None
 
 def json_response(data, status=200):
@@ -54,10 +69,10 @@ def home():
     return json_response({
         'message': 'Livestream API is running!', 
         'database': 'connected',
-        'environment': os.getenv('RENDER', 'development')
+        'environment': 'production' if os.getenv('RENDER') else 'development'
     })
 
-# Routes for Overlays CRUD (keep your existing routes the same)
+# Your existing routes here (GET, POST, PUT, DELETE for /api/overlays)
 @app.route('/api/overlays', methods=['GET'])
 def get_overlays():
     db_error = check_db_connection()
@@ -145,7 +160,6 @@ def delete_overlay(overlay_id):
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-# Health check endpoint with DB status
 @app.route('/api/health', methods=['GET'])
 def health_check():
     try:
@@ -154,7 +168,7 @@ def health_check():
             'status': 'healthy', 
             'message': 'Server is running',
             'database': db_status,
-            'environment': os.getenv('RENDER', 'development')
+            'environment': 'production' if os.getenv('RENDER') else 'development'
         })
     except Exception as e:
         return json_response({
@@ -162,24 +176,6 @@ def health_check():
             'message': str(e),
             'database': 'disconnected'
         }, 500)
-
-# Database connection test endpoint
-@app.route('/api/test-db', methods=['GET'])
-def test_db():
-    try:
-        if mongo:
-            mongo.db.command('ping')
-            overlays_count = mongo.db.overlays.count_documents({})
-            return json_response({
-                'status': 'success',
-                'message': 'Database connection successful',
-                'overlays_count': overlays_count,
-                'database': 'livestream_app'
-            })
-        else:
-            return json_response({'status': 'error', 'message': 'Database not connected'}, 500)
-    except Exception as e:
-        return json_response({'status': 'error', 'message': str(e)}, 500)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
