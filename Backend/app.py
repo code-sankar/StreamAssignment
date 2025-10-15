@@ -18,10 +18,7 @@ app.url_map.strict_slashes = False
 # Allowed Frontend Origins
 allowed_origins = [
     "https://stream-assignment-mtxz1vrt9-sankars-projects-3d0835cc.vercel.app",
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173"
+    "hhttp://localhost:5173/"
 ]
 
 # ✅ CORS Setup (fully configured)

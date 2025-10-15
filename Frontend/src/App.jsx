@@ -3,7 +3,7 @@ import axios from 'axios';
 import VideoPlayer from './components/VideoPlayer';
 import OverlayManager from './components/OverlayManager';
 
-const API_BASE = 'https://streamassignment.onrender.com/api';
+const API_BASE = 'https://streamassignment.onrender.com';
 
 function App() {
   const [overlays, setOverlays] = useState([]);
@@ -14,7 +14,7 @@ function App() {
   // Load overlays from backend
   const loadOverlays = async () => {
     try {
-      const response = await axios.get(`${API_BASE}overlays`);
+      const response = await axios.get(`${API_BASE}/overlays`);
       setOverlays(response.data);
     } catch (error) {
       console.error('Error loading overlays:', error);
