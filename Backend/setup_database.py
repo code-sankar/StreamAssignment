@@ -9,7 +9,7 @@ def setup_database():
     try:
         # Get MongoDB connection string
         mongodb_uri = os.getenv('MONGODB_URI', 'mongodb+srv://sankarjyotichetia57_db_user:U1IFPLMwvQcZfKE0@cluster0.cpddo24.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
-        database_name = os.getenv('DATABASE_NAME', 'streamassignment')
+        database_name = os.getenv('DATABASE_NAME', 'DPEe0TxhxCtrJ2ET0othTM7waFDuOP5y5S4ByHh6Poxm578YES21FC')
         
         if not mongodb_uri:
             print(" MONGODB_URI not found in .env file")
