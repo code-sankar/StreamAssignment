@@ -94,7 +94,7 @@ def home():
         'cors': 'enabled'
     })
 
-@app.route('/api/overlays', methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/overlays', methods=['GET', 'POST', 'OPTIONS'])
 def overlays():
     db_error = check_db_connection()
     if db_error:
@@ -125,7 +125,7 @@ def overlays():
         except Exception as e:
             return json_response({'error': str(e)}, 500)
 
-@app.route('/api/overlays/<overlay_id>', methods=['GET', 'PUT', 'DELETE', 'OPTIONS'])
+@app.route('/overlays/<overlay_id>', methods=['GET', 'PUT', 'DELETE', 'OPTIONS'])
 def overlay_by_id(overlay_id):
     db_error = check_db_connection()
     if db_error:
@@ -158,7 +158,7 @@ def overlay_by_id(overlay_id):
     except Exception as e:
         return json_response({'error': str(e)}, 500)
 
-@app.route('/api/health', methods=['GET', 'OPTIONS'])
+@app.route('/health', methods=['GET', 'OPTIONS'])
 def health_check():
     try:
         mongo.db.command('ping')
@@ -174,7 +174,7 @@ def health_check():
             'database': 'disconnected'
         }, 500)
 
-@app.route('/api/debug', methods=['GET', 'OPTIONS'])
+@app.route('/debug', methods=['GET', 'OPTIONS'])
 def debug_info():
     mongo_uri = os.getenv('MONGO_URI')
     origin = request.headers.get('Origin', 'Not provided')
