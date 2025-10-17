@@ -15,7 +15,9 @@ app.url_map.strict_slashes = False
 
 # Allowed Frontend Origins - FIXED: Removed invalid URL
 allowed_origins = [
-    "https://stream-assignment-mtxz1vrt9-sankars-projects-3d0835cc.vercel.app",
+    "https://stream-assignment-eight.vercel.app/",
+    "https://stream-assignment-git-main-sankars-projects-3d0835cc.vercel.app/",
+    "https://stream-assignment-c480upj3s-sankars-projects-3d0835cc.vercel.app/",
     "http://localhost:5173",
     "http://127.0.0.1:5173"
 ]
