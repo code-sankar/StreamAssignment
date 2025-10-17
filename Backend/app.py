@@ -9,59 +9,52 @@ import json
 app = Flask(__name__)
 
 # Configuration
-
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'DPEe0TxhxCtrJ2ET0othTM7waFDuOP5y5S4ByHh6Poxm578YES21FC')
 app.config['DEBUG'] = False
 app.url_map.strict_slashes = False
 
-# Allowed Frontend Origins
+# Allowed Frontend Origins - FIXED: Removed invalid URL
 allowed_origins = [
     "https://stream-assignment-mtxz1vrt9-sankars-projects-3d0835cc.vercel.app",
-    "hhttp://localhost:5173/"
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
 ]
 
-#  CORS Setup 
-CORS(
-    app,
-    origins=allowed_origins,
-    supports_credentials=False,   
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"]
-)
-
+# CORS Setup - SIMPLIFIED
+CORS(app, origins=allowed_origins)
 
 # MongoDB Connection
-
 mongo = None
 overlay_manager = None
 
 try:
-    mongo_uri = os.getenv(
-        'MONGO_URI',
-        'mongodb+srv://sankarjyotichetia57_db_user:U1IFPLMwvQcZfKE0@cluster0.cpddo24.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
-    )
+    # Use the direct MongoDB URI without .env file issues
+    mongo_uri = 'mongodb+srv://sankarjyotichetia57_db_user:U1IFPLMwvQcZfKE0@cluster0.cpddo24.mongodb.net/livestream_app?retryWrites=true&w=majority&appName=Cluster0'
     
-    if not mongo_uri:
-        raise ValueError("MONGO_URI environment variable is not set")
+    print("Attempting to connect to MongoDB...")
+    print(f"MongoDB URI: {mongo_uri.split('@')[0]}...")
     
-    print(f"Attempting to connect to MongoDB...")
     app.config['MONGO_URI'] = mongo_uri
     app.config['MONGO_CONNECT'] = False
+    
+    # Initialize PyMongo
     mongo = PyMongo(app)
     
-    # Test connection
+    # Test connection with error handling
+    print("Testing MongoDB connection...")
     mongo.db.command('ping')
     print("✅ Successfully connected to MongoDB Atlas!")
-
+    
+    # Import and initialize OverlayManager
     from models import OverlayManager
     overlay_manager = OverlayManager(mongo)
     print("✅ OverlayManager initialized successfully!")
 
 except Exception as e:
     print(f"❌ MongoDB initialization failed: {str(e)}")
+    print(f"Error type: {type(e).__name__}")
     mongo = None
     overlay_manager = None
-
 
 # Helper Functions
 def json_response(data, status=200):
@@ -73,7 +66,7 @@ def json_response(data, status=200):
 
 def check_db_connection():
     if not mongo:
-        return json_response({'error': 'Database connection failed'}, 500)
+        return json_response({'error': 'Database connection not initialized'}, 500)
     try:
         mongo.db.command('ping')
         return None
@@ -81,14 +74,13 @@ def check_db_connection():
         return json_response({'error': f'Database ping failed: {str(e)}'}, 500)
 
 # Routes
-
 @app.route('/')
 def home():
+    db_status = 'connected' if mongo else 'disconnected'
     return json_response({
         'message': 'Livestream API is running!',
-        'database': 'connected' if mongo else 'disconnected',
-        'environment': 'production' if os.getenv('RENDER') else 'development',
-        'cors': 'enabled'
+        'database': db_status,
+        'environment': 'production' if os.getenv('RENDER') else 'development'
     })
 
 @app.route('/overlays', methods=['GET', 'POST', 'OPTIONS'])
@@ -99,10 +91,10 @@ def overlays():
 
     if request.method == 'GET':
         try:
-            overlays = overlay_manager.get_all_overlays()
-            for overlay in overlays:
+            overlays_list = overlay_manager.get_all_overlays()
+            for overlay in overlays_list:
                 overlay['_id'] = str(overlay['_id'])
-            return json_response(overlays)
+            return json_response(overlays_list)
         except Exception as e:
             return json_response({'error': str(e)}, 500)
 
@@ -111,14 +103,19 @@ def overlays():
             data = request.get_json()
             if not data:
                 return json_response({'error': 'No JSON data provided'}, 400)
+            
             required_fields = ['name', 'type', 'content', 'position', 'size']
             for field in required_fields:
                 if field not in data:
                     return json_response({'error': f'Missing field: {field}'}, 400)
 
             overlay = overlay_manager.create_overlay(data)
-            overlay['_id'] = str(overlay['_id'])
-            return json_response(overlay, 201)
+            if overlay:
+                overlay['_id'] = str(overlay['_id'])
+                return json_response(overlay, 201)
+            else:
+                return json_response({'error': 'Failed to create overlay'}, 500)
+                
         except Exception as e:
             return json_response({'error': str(e)}, 500)
 
@@ -140,6 +137,7 @@ def overlay_by_id(overlay_id):
             data = request.get_json()
             if not data:
                 return json_response({'error': 'No JSON data provided'}, 400)
+            
             overlay = overlay_manager.update_overlay(overlay_id, data)
             if overlay:
                 overlay['_id'] = str(overlay['_id'])
@@ -158,12 +156,19 @@ def overlay_by_id(overlay_id):
 @app.route('/health', methods=['GET', 'OPTIONS'])
 def health_check():
     try:
-        mongo.db.command('ping')
-        return json_response({
-            'status': 'healthy',
-            'database': 'connected',
-            'environment': 'production' if os.getenv('RENDER') else 'development'
-        })
+        if mongo:
+            mongo.db.command('ping')
+            return json_response({
+                'status': 'healthy',
+                'database': 'connected',
+                'environment': 'production' if os.getenv('RENDER') else 'development'
+            })
+        else:
+            return json_response({
+                'status': 'error',
+                'message': 'MongoDB not initialized',
+                'database': 'disconnected'
+            }, 500)
     except Exception as e:
         return json_response({
             'status': 'error',
@@ -173,29 +178,47 @@ def health_check():
 
 @app.route('/debug', methods=['GET', 'OPTIONS'])
 def debug_info():
-    mongo_uri = os.getenv('MONGO_URI')
-    origin = request.headers.get('Origin', 'Not provided')
+    mongo_status = 'connected' if mongo else 'disconnected'
+    overlay_manager_status = 'initialized' if overlay_manager else 'failed'
+    
     return json_response({
-        'render': bool(os.getenv('RENDER')),
-        'mongo_uri_set': bool(mongo_uri),
-        'mongo_uri_preview': mongo_uri.split('@')[0] + '...' if mongo_uri else 'not set',
+        'mongo_status': mongo_status,
+        'overlay_manager_status': overlay_manager_status,
         'python_version': sys.version,
-        'request_origin': origin,
-        'cors_enabled': True
+        'allowed_origins': allowed_origins
     })
 
-# Extra safety: Always return CORS headers
-
-@app.after_request
-def after_request(response):
-    origin = request.headers.get('Origin')
-    if origin in allowed_origins:
-        response.headers.add("Access-Control-Allow-Origin", origin)
-    response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
-    return response
+# Test route to check MongoDB directly
+@app.route('/test-mongo', methods=['GET'])
+def test_mongo():
+    try:
+        if mongo:
+            # Try to list collections
+            collections = mongo.db.list_collection_names()
+            # Try to count overlays
+            overlays_count = mongo.db.overlays.count_documents({})
+            
+            return json_response({
+                'status': 'success',
+                'collections': collections,
+                'overlays_count': overlays_count,
+                'message': 'MongoDB is working correctly'
+            })
+        else:
+            return json_response({
+                'status': 'error',
+                'message': 'MongoDB not initialized'
+            }, 500)
+    except Exception as e:
+        return json_response({
+            'status': 'error',
+            'message': str(e),
+            'error_type': type(e).__name__
+        }, 500)
 
 # Run the App
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
+    print(f"Starting server on port {port}...")
+    print(f"Allowed origins: {allowed_origins}")
     app.run(host='0.0.0.0', port=port, debug=False)
