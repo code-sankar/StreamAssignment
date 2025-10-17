@@ -8,9 +8,8 @@ import json
 
 app = Flask(__name__)
 
-# ==========================
 # Configuration
-# ==========================
+
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'DPEe0TxhxCtrJ2ET0othTM7waFDuOP5y5S4ByHh6Poxm578YES21FC')
 app.config['DEBUG'] = False
 app.url_map.strict_slashes = False
@@ -21,18 +20,18 @@ allowed_origins = [
     "hhttp://localhost:5173/"
 ]
 
-# ✅ CORS Setup (fully configured)
+#  CORS Setup 
 CORS(
     app,
     origins=allowed_origins,
-    supports_credentials=False,   # You are not using JWT or cookies
+    supports_credentials=False,   
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"]
 )
 
-# ==========================
+
 # MongoDB Connection
-# ==========================
+
 mongo = None
 overlay_manager = None
 
@@ -63,9 +62,8 @@ except Exception as e:
     mongo = None
     overlay_manager = None
 
-# ==========================
+
 # Helper Functions
-# ==========================
 def json_response(data, status=200):
     return app.response_class(
         response=json.dumps(data, default=str),
@@ -82,9 +80,8 @@ def check_db_connection():
     except Exception as e:
         return json_response({'error': f'Database ping failed: {str(e)}'}, 500)
 
-# ==========================
 # Routes
-# ==========================
+
 @app.route('/')
 def home():
     return json_response({
@@ -187,9 +184,8 @@ def debug_info():
         'cors_enabled': True
     })
 
-# ==========================
 # Extra safety: Always return CORS headers
-# ==========================
+
 @app.after_request
 def after_request(response):
     origin = request.headers.get('Origin')
@@ -199,9 +195,7 @@ def after_request(response):
     response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
     return response
 
-# ==========================
 # Run the App
-# ==========================
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 8000))
     app.run(host='0.0.0.0', port=port, debug=False)
